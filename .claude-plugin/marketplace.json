@@ -1,0 +1,13 @@
+{
+  "name": "toolhub-marketplace",
+  "owner": {
+    "name": "natustx"
+  },
+  "plugins": [
+    {
+      "name": "toolhub",
+      "source": "./toolhub-plugin",
+      "description": "Search local documentation index for library and tool documentation"
+    }
+  ]
+}

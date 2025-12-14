@@ -1,0 +1,8 @@
+{
+  "name": "toolhub",
+  "description": "Search local documentation index for library and tool documentation",
+  "version": "0.1.0",
+  "author": {
+    "name": "natustx"
+  }
+}
