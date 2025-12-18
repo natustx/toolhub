@@ -21,6 +21,10 @@ dependencies = [
     "pydantic>=2.0.0",
     "beautifulsoup4>=4.12.0",
     "markdownify>=0.11.0",
+    "psycopg[binary,pool]>=3.1.0",
+    "pgvector>=0.2.0",
+    "boto3>=1.34.0",
+    "jsonschema>=4.20.0",
 ]
 
 [project.scripts]
@@ -40,4 +44,18 @@ select = ["E", "F", "I", "N", "W", "UP"]
 [dependency-groups]
 dev = [
     "ruff>=0.14.9",
+    "pytest>=8.0.0",
+    "pytest-xdist>=3.5.0",
+    "pytest-cov>=4.1.0",
+    "boto3-stubs[s3]>=1.34.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: integration tests requiring Docker deps",
+    "unit: unit tests with no external deps",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
 ]

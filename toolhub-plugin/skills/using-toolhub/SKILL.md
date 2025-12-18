@@ -87,7 +87,9 @@ Example: "Search toolhub for beads:how to configure dependencies"
 If a tool isn't indexed, add it:
 
 ```bash
-toolhub add https://github.com/owner/repo
+toolhub add <name> <url>
+# Example:
+toolhub add fastapi https://github.com/fastapi/fastapi
 ```
 
 ## IMPORTANT: Tool Selection

@@ -1,26 +1,45 @@
-# Storage layer: LanceDB vector store + SQLite operations
+# Storage layer: Postgres + S3 (KnowledgeStore) + legacy SQLite operations
 
-from toolhub.store.lance import VectorStore, delete_tool_store, list_tool_stores
-from toolhub.store.operations import Operation, OperationsStore
-from toolhub.store.search import (
-    OperationResult,
-    OutputFormat,
+# New unified storage backend
+from toolhub.store.knowledge import (
+    ArtifactKind,
+    Chunk,
+    Citation,
+    Entity,
+    EntityType,
+    EntityValidationError,
+    Evidence,
+    KnowledgeStore,
     SearchResponse,
     SearchResult,
-    search,
-    search_tool,
+    Source,
+    SourceArtifact,
+    SourceStatus,
 )
 
+# Legacy operations store (SQLite, kept for API operation search)
+from toolhub.store.operations import Operation, OperationsStore
+
+# Output format enum
+from toolhub.store.search import OutputFormat
+
 __all__ = [
-    "VectorStore",
-    "delete_tool_store",
-    "list_tool_stores",
+    # New KnowledgeStore types
+    "KnowledgeStore",
+    "Source",
+    "SourceStatus",
+    "SourceArtifact",
+    "ArtifactKind",
+    "Chunk",
+    "SearchResult",
+    "SearchResponse",
+    "EntityType",
+    "Entity",
+    "EntityValidationError",
+    "Evidence",
+    "Citation",
+    # Legacy (kept for backward compat)
     "Operation",
-    "OperationResult",
     "OperationsStore",
     "OutputFormat",
-    "SearchResponse",
-    "SearchResult",
-    "search",
-    "search_tool",
 ]

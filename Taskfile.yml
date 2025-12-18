@@ -1,0 +1,210 @@
+version: '3'
+
+vars:
+  DATABASE_URL: '{{.DATABASE_URL | default "postgresql://localhost:5432/toolhub"}}'
+  MINIO_ENDPOINT: '{{.MINIO_ENDPOINT | default "http://localhost:9000"}}'
+  MINIO_BUCKET: '{{.MINIO_BUCKET | default "toolhub"}}'
+
+tasks:
+  # ============================================================================
+  # Setup (idempotent - safe to run multiple times)
+  # ============================================================================
+  setup:
+    desc: Set up local dev environment (native Postgres + MinIO)
+    cmds:
+      - task: setup:check
+      - task: setup:db
+      - task: setup:s3
+      - task: setup:config
+      - task: setup:entities
+      - echo "✓ Setup complete! Run 'toolhub status' to verify."
+
+  setup:check:
+    desc: Verify prerequisites are installed and running
+    cmds:
+      - |
+        echo "Checking prerequisites..."
+        MISSING=""
+
+        # Check psql
+        if ! command -v psql &> /dev/null; then
+          echo "✗ psql not found (brew install postgresql@17)"
+          MISSING="$MISSING psql"
+        else
+          echo "✓ psql found: $(which psql)"
+        fi
+
+        # Check Postgres is running
+        if ! psql -d postgres -c "SELECT 1" &> /dev/null; then
+          echo "✗ Postgres not running (brew services start postgresql@17)"
+          MISSING="$MISSING postgres"
+        else
+          echo "✓ Postgres running"
+        fi
+
+        # Check pgvector extension
+        if ! psql -d postgres -tc "SELECT 1 FROM pg_available_extensions WHERE name = 'vector'" | grep -q 1; then
+          echo "✗ pgvector not installed (brew install pgvector)"
+          MISSING="$MISSING pgvector"
+        else
+          echo "✓ pgvector available"
+        fi
+
+        # Check mc (MinIO client)
+        if ! command -v mc &> /dev/null; then
+          echo "✗ mc not found (brew install minio/stable/mc)"
+          MISSING="$MISSING mc"
+        else
+          echo "✓ mc found: $(which mc)"
+        fi
+
+        # Check MinIO is running
+        if ! curl -s {{.MINIO_ENDPOINT}}/minio/health/live &> /dev/null; then
+          echo "✗ MinIO not running (minio server ~/minio-data)"
+          MISSING="$MISSING minio"
+        else
+          echo "✓ MinIO running at {{.MINIO_ENDPOINT}}"
+        fi
+
+        if [ -n "$MISSING" ]; then
+          echo ""
+          echo "Missing prerequisites:$MISSING"
+          echo "Install with: brew install postgresql@17 pgvector minio/stable/minio minio/stable/mc"
+          exit 1
+        fi
+
+        echo "✓ All prerequisites met"
+
+  setup:db:
+    desc: Create toolhub database and apply migrations
+    cmds:
+      - |
+        # Create database if it doesn't exist (uses current user as superuser on macOS/Homebrew)
+        psql -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'toolhub'" | grep -q 1 || \
+          psql -d postgres -c "CREATE DATABASE toolhub"
+      - uv run toolhub db migrate
+      - echo "✓ Database ready"
+
+  setup:s3:
+    desc: Create MinIO bucket
+    cmds:
+      - |
+        # Configure mc alias (idempotent)
+        mc alias set toolhub {{.MINIO_ENDPOINT}} minioadmin minioadmin 2>/dev/null || true
+        # Create bucket (--ignore-existing makes it idempotent)
+        mc mb toolhub/{{.MINIO_BUCKET}} --ignore-existing
+      - echo "✓ MinIO bucket ready"
+
+  setup:config:
+    desc: Create ~/.toolhub/config.toml if missing
+    cmds:
+      - mkdir -p ~/.toolhub
+      - |
+        if [ ! -f ~/.toolhub/config.toml ]; then
+          cat > ~/.toolhub/config.toml << 'EOF'
+        [daemon]
+        host = "127.0.0.1"
+        port = 9742
+
+        [postgres]
+        url = "postgresql://localhost:5432/toolhub"
+
+        [s3]
+        endpoint_url = "http://localhost:9000"
+        bucket = "toolhub"
+        access_key = "minioadmin"
+        secret_key = "minioadmin"
+        EOF
+          echo "✓ Created ~/.toolhub/config.toml"
+        else
+          echo "✓ Config already exists at ~/.toolhub/config.toml"
+        fi
+
+  setup:entities:
+    desc: Register built-in entity type schemas (feature_taxonomy, competitor)
+    cmds:
+      - uv run toolhub db seed
+      - echo "✓ Entity types registered (run 'toolhub entity type list' to verify)"
+
+  # ============================================================================
+  # Local development (honcho)
+  # ============================================================================
+  dev:up:
+    desc: Start MinIO + API via honcho
+    cmds:
+      - honcho start
+
+  dev:init:
+    desc: Initialize dev environment (migrations + bucket + seed schemas)
+    cmds:
+      - task: db:migrate
+      - task: s3:init
+      - task: setup:entities
+
+  dev:down:
+    desc: Stop honcho processes
+    cmds:
+      - pkill -f "honcho" || true
+
+  # Database tasks
+  db:migrate:
+    desc: Apply pending database migrations
+    cmds:
+      - uv run toolhub db migrate
+
+  db:status:
+    desc: Show database migration status
+    cmds:
+      - uv run toolhub db status
+
+  db:reset:
+    desc: Drop and recreate database (DESTRUCTIVE)
+    prompt: This will DROP the database. Continue?
+    cmds:
+      - psql "{{.DATABASE_URL}}" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+      - task: db:migrate
+
+  # S3/MinIO tasks
+  s3:init:
+    desc: Create toolhub bucket in MinIO
+    cmds:
+      - mc alias set local http://localhost:9000 minioadmin minioadmin 2>/dev/null || true
+      - mc mb local/toolhub --ignore-existing
+
+  # API tasks
+  api:health:
+    desc: Check daemon health
+    cmds:
+      - curl -s http://localhost:9742/health | jq .
+
+  # Testing
+  test:
+    desc: Run full test suite
+    cmds:
+      - uv run pytest tests/ -v
+
+  test:integration:
+    desc: Run integration tests only
+    cmds:
+      - uv run pytest tests/ -v -m integration
+
+  test:docker:up:
+    desc: Start test containers (Postgres + MinIO)
+    cmds:
+      - docker compose -f docker-compose.test.yml up -d
+
+  test:docker:down:
+    desc: Stop test containers
+    cmds:
+      - docker compose -f docker-compose.test.yml down -v
+
+  # Linting
+  lint:
+    desc: Run ruff linter
+    cmds:
+      - uv run ruff check src/ tests/
+
+  format:
+    desc: Run ruff formatter
+    cmds:
+      - uv run ruff format src/ tests/

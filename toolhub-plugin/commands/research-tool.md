@@ -1,5 +1,5 @@
 ---
-name: research
+name: research-tool
 description: Deep-dive documentation research for complex questions requiring synthesis
 arguments:
   - name: query
@@ -76,4 +76,4 @@ toolhub search "ASPECT_1" --limit 10 --format markdown
 
 5. Target **500-1000 tokens** - this is meant to be thorough, not brief.
 
-If results are sparse, acknowledge gaps and suggest adding more documentation with `toolhub add <url>`.
+If results are sparse, acknowledge gaps and suggest adding more documentation with `toolhub add <name> <url>`.

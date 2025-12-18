@@ -40,27 +40,28 @@ Break complex questions into targeted searches. For example:
 
 ## How to Search
 
-Run all searches **in parallel** using the helper script:
+Run multiple searches to gather comprehensive information. Execute searches in parallel for efficiency:
 
 ```bash
-/Users/me/prj/drift/toolhub/scripts/toolhub-parallel-search.sh TOOL_NAME \
-    "query 1" \
-    "query 2" \
-    "query 3"
+# Run 2-3 searches covering different aspects
+toolhub search "ASPECT_1" --tool TOOL_NAME --limit 10 --format markdown &
+toolhub search "ASPECT_2" --tool TOOL_NAME --limit 10 --format markdown &
+toolhub search "ASPECT_3" --tool TOOL_NAME --limit 10 --format markdown &
+wait
 ```
 
 **Example for BitTensor subnet question:**
 ```bash
-/Users/me/prj/drift/toolhub/scripts/toolhub-parallel-search.sh bittensor \
-    "subnet creation setup" \
-    "subnet configuration requirements" \
-    "subnet registration deployment"
+toolhub search "subnet creation setup" --tool bittensor --limit 10 --format markdown &
+toolhub search "subnet configuration requirements" --tool bittensor --limit 10 --format markdown &
+toolhub search "subnet registration deployment" --tool bittensor --limit 10 --format markdown &
+wait
 ```
 
 **Key differences from librarian:**
-- Use parallel script for 2-3 searches at once
+- Run 2-3 searches covering different aspects of the question
 - Each search returns up to 10 results
-- Total search time: ~100-150ms (parallel vs ~300ms sequential)
+- Searches run in parallel for efficiency
 
 ## Response Format
 
@@ -115,10 +116,10 @@ Provide a thorough, structured response (500-1000 tokens):
 
 **Searches** (parallel):
 ```bash
-/Users/me/prj/drift/toolhub/scripts/toolhub-parallel-search.sh fastapi \
-    "authentication security" \
-    "OAuth2 JWT tokens" \
-    "dependencies injection auth"
+toolhub search "authentication security" --tool fastapi --limit 10 --format markdown &
+toolhub search "OAuth2 JWT tokens" --tool fastapi --limit 10 --format markdown &
+toolhub search "dependencies injection auth" --tool fastapi --limit 10 --format markdown &
+wait
 ```
 
 **Response**:

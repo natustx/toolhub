@@ -52,7 +52,7 @@ def update_source(
     from toolhub.crawler import GitHubCrawler, LlmsTxtCrawler, WebsiteCrawler
     from toolhub.indexer import chunk_directory, embed_chunks
     from toolhub.paths import get_source_cache_dir
-    from toolhub.store import VectorStore
+    from toolhub.store.knowledge import KnowledgeStore, SourceStatus
 
     config = load_config()
 
@@ -94,10 +94,36 @@ def update_source(
 
         embedded = embed_chunks(chunks, model_name=config.embedding.model)
 
-        # Store
-        store = VectorStore(tool.tool_id)
-        store.clear()
-        store.add_chunks(embedded)
+        # Store in KnowledgeStore
+        ks = KnowledgeStore(config)
+        try:
+            # Create or update source record
+            ks_source = ks.add_source(
+                canonical_url=source.url,
+                source_type=source.source_type,
+                collection=tool.tool_id,
+                tags=[tool.tool_id],
+                status=SourceStatus.INDEXED,
+            )
+
+            # Delete existing chunks and add new ones
+            ks.delete_chunks(ks_source.id)
+
+            # Convert embedded chunks to batch format
+            chunk_data = [
+                {
+                    "content": ec.content,
+                    "heading": ec.heading,
+                    "heading_path": ec.heading_path,
+                    "source_file": ec.source_file,
+                    "is_code": ec.is_code,
+                    "embedding": list(ec.embedding),
+                }
+                for ec in embedded
+            ]
+            ks.add_chunks_batch(ks_source, chunk_data, model_id=config.embedding.model)
+        finally:
+            ks.close()
 
         # Update registry
         registry = load_registry()

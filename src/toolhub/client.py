@@ -170,7 +170,7 @@ class DaemonClient:
     ) -> dict:
         """Add a documentation source."""
         response = self._get_client().post(
-            "/tools/add",
+            "/api/v1/tools/add",
             json={"url": url, "name": name, "replace": replace},
         )
         response.raise_for_status()
@@ -184,7 +184,7 @@ class DaemonClient:
     ) -> dict:
         """Search documentation."""
         response = self._get_client().post(
-            "/tools/query",
+            "/api/v1/tools/query",
             json={"query": query, "tool_ids": tool_ids, "limit": limit},
         )
         response.raise_for_status()
@@ -192,24 +192,24 @@ class DaemonClient:
 
     def list_tools(self) -> dict:
         """List all indexed tools."""
-        response = self._get_client().get("/tools")
+        response = self._get_client().get("/api/v1/tools")
         response.raise_for_status()
         return response.json()
 
     def get_tool(self, tool_id: str) -> dict:
         """Get tool details."""
-        response = self._get_client().get(f"/tools/{tool_id}")
+        response = self._get_client().get(f"/api/v1/tools/{tool_id}")
         response.raise_for_status()
         return response.json()
 
     def remove_tool(self, tool_id: str) -> dict:
         """Remove a tool."""
-        response = self._get_client().delete(f"/tools/{tool_id}")
+        response = self._get_client().delete(f"/api/v1/tools/{tool_id}")
         response.raise_for_status()
         return response.json()
 
     def stop(self) -> dict:
         """Stop the daemon."""
-        response = self._get_client().post("/stop")
+        response = self._get_client().post("/api/v1/stop")
         response.raise_for_status()
         return response.json()

@@ -35,4 +35,4 @@ toolhub search "$ARGUMENTS.query" --limit 5 --format markdown
 
 If no results are found, suggest:
 1. Check what tools are indexed with `toolhub list`
-2. Add the relevant documentation with `toolhub add <github-url>`
+2. Add the relevant documentation with `toolhub add <name> <url>`
